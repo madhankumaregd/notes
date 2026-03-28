@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Noteflow — Your Ideas, Organized</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">Noteflow</span>
+      </div>
+      <button class="new-note-btn" id="newNoteBtn">+ New Note</button>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search notes..." />
+    </div>
+
+    <div class="tags-section">
+      <p class="section-label">TAGS</p>
+      <div class="tags-filter" id="tagsFilter">
+        <button class="tag-pill active" data-tag="all">All</button>
+      </div>
+    </div>
+
+    <div class="notes-list" id="notesList"></div>
+  </aside>
+
+  <!-- MAIN EDITOR -->
+  <main class="main" id="main">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">✦</div>
+      <h2>Select a note or create one</h2>
+      <p>Your thoughts deserve a beautiful home.</p>
+      <button class="new-note-btn-lg" id="newNoteBtnLg">Create your first note</button>
+    </div>
+
+    <div class="editor-panel" id="editorPanel" style="display:none;">
+      <div class="editor-topbar">
+        <div class="editor-meta">
+          <input type="text" id="noteTitleInput" class="title-input" placeholder="Note title..." />
+          <div class="tag-input-row">
+            <span class="tag-label">Tags:</span>
+            <input type="text" id="tagInput" class="tag-input" placeholder="e.g. work, ideas, personal (comma separated)" />
+          </div>
+        </div>
+        <div class="editor-actions">
+          <span class="save-status" id="saveStatus">Saved</span>
+          <button class="btn-delete" id="deleteNoteBtn">Delete</button>
+        </div>
+      </div>
+      <textarea id="noteContent" class="note-textarea" placeholder="Start writing your note here..."></textarea>
+    </div>
+  </main>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>Delete this note?</h3>
+      <p>This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancelDelete">Cancel</button>
+        <button class="btn-confirm-delete" id="confirmDelete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE TOGGLE -->
+  <button class="mobile-toggle" id="mobileToggle">☰</button>
+
+  <script src="app.js"></script>
+</body>
+</html>
