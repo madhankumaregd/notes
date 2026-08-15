@@ -4,12 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Noteflow — Your Ideas, Organized</title>
+    <meta name="description" content="Noteflow is a beautiful, distraction-free note-taking app with rich formatting, tagging, search, and themes — all stored locally in your browser." />
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@400;700&family=Lora:wght@400;500;700&family=Source+Serif+4:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <!-- Material Symbols for Word-like icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=add_link,arrow_drop_down,block,border_all,check_box,code_blocks,content_copy,delete,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_list_bulleted,format_list_numbered,format_paint,format_quote,format_size,format_strikethrough,format_underlined,horizontal_rule,image,menu_book,pause,play_arrow,print,redo,search,stop,subscript,superscript,text_to_speech,undo,volume_up&display=swap" />
   </head>
   <body class="theme-dark">
     <!-- SIDEBAR -->
@@ -32,7 +35,7 @@
       </div>
 
       <div class="search-wrap">
-        <span class="search-icon">⌕</span>
+        <span class="search-icon"><span class="material-symbols-rounded" style="font-size:18px">search</span></span>
         <input
           type="text"
           id="searchInput"
@@ -82,14 +85,230 @@
             </div>
           </div>
           <div class="editor-actions">
-            <button class="btn-tool" id="addChecklistBtn">
-              ☑ Add Checklist
+            <button class="btn-tool" id="addChecklistBtn" title="Add Checklist">
+              <span class="material-symbols-rounded">check_box</span> Checklist
+            </button>
+            <button class="btn-tool btn-duplicate" id="duplicateNoteBtn" title="Duplicate this note">
+              <span class="material-symbols-rounded">content_copy</span> Duplicate
+            </button>
+            <button class="btn-tool btn-reading-mode" id="readingModeBtn" title="Reading Mode">
+              <span class="material-symbols-rounded">menu_book</span> Read
             </button>
             <span class="save-status" id="saveStatus">Saved</span>
-            <button class="btn-delete" id="deleteNoteBtn">Delete</button>
+            <span class="word-count" id="wordCount" title="Word count">0 words</span>
+            <button class="btn-delete" id="deleteNoteBtn" title="Delete note">
+              <span class="material-symbols-rounded" style="font-size:16px">delete</span> Delete
+            </button>
           </div>
         </div>
-        <!-- Changed from textarea to contenteditable div to support HTML checkboxes -->
+
+        <!-- FORMATTING TOOLBAR -->
+        <div class="formatting-toolbar" id="formattingToolbar">
+
+          <!-- Undo / Redo -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">
+              <span class="material-symbols-rounded">undo</span>
+            </button>
+            <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">
+              <span class="material-symbols-rounded">redo</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Font Family -->
+          <div class="toolbar-group">
+            <select id="fontFamilySelect" class="toolbar-select toolbar-select-font" title="Font Family">
+              <option value="DM Sans">DM Sans</option>
+              <option value="Inter">Inter</option>
+              <option value="Merriweather">Merriweather</option>
+              <option value="Lora">Lora</option>
+              <option value="Source Serif 4">Source Serif</option>
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="JetBrains Mono">JetBrains Mono</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Arial">Arial</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Courier New">Courier New</option>
+              <option value="Verdana">Verdana</option>
+              <option value="Trebuchet MS">Trebuchet MS</option>
+              <option value="Calibri">Calibri</option>
+            </select>
+          </div>
+
+          <!-- Font Size -->
+          <div class="toolbar-group">
+            <select id="fontSizeSelect" class="toolbar-select toolbar-select-size" title="Font Size">
+              <option value="1">8</option>
+              <option value="2">10</option>
+              <option value="3" selected>12</option>
+              <option value="4">14</option>
+              <option value="5">18</option>
+              <option value="6">24</option>
+              <option value="7">36</option>
+            </select>
+          </div>
+
+          <!-- Heading -->
+          <div class="toolbar-group">
+            <select id="headingSelect" class="toolbar-select toolbar-select-heading" title="Heading Style">
+              <option value="p">Normal</option>
+              <option value="h1">Heading 1</option>
+              <option value="h2">Heading 2</option>
+              <option value="h3">Heading 3</option>
+              <option value="h4">Heading 4</option>
+              <option value="h5">Heading 5</option>
+              <option value="h6">Heading 6</option>
+            </select>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Text Formatting -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
+              <span class="material-symbols-rounded">format_bold</span>
+            </button>
+            <button class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
+              <span class="material-symbols-rounded">format_italic</span>
+            </button>
+            <button class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
+              <span class="material-symbols-rounded">format_underlined</span>
+            </button>
+            <button class="toolbar-btn" data-command="strikeThrough" title="Strikethrough">
+              <span class="material-symbols-rounded">format_strikethrough</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Subscript / Superscript -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" data-command="subscript" title="Subscript">
+              <span class="material-symbols-rounded">subscript</span>
+            </button>
+            <button class="toolbar-btn" data-command="superscript" title="Superscript">
+              <span class="material-symbols-rounded">superscript</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Text Color -->
+          <div class="toolbar-group">
+            <label class="toolbar-btn toolbar-color-btn" title="Text Color">
+              <span class="material-symbols-rounded">format_color_text</span>
+              <input type="color" id="textColorPicker" class="hidden-color-input" value="#e8b86d" />
+              <span class="color-indicator" id="textColorIndicator" style="background:#e8b86d;"></span>
+            </label>
+            <label class="toolbar-btn toolbar-color-btn" title="Highlight Color">
+              <span class="material-symbols-rounded">format_color_fill</span>
+              <input type="color" id="highlightColorPicker" class="hidden-color-input" value="#3a342c" />
+              <span class="color-indicator" id="highlightColorIndicator" style="background:#3a342c;"></span>
+            </label>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Lists -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+              <span class="material-symbols-rounded">format_list_bulleted</span>
+            </button>
+            <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+              <span class="material-symbols-rounded">format_list_numbered</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Indent -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" data-command="outdent" title="Decrease Indent">
+              <span class="material-symbols-rounded">format_indent_decrease</span>
+            </button>
+            <button class="toolbar-btn" data-command="indent" title="Increase Indent">
+              <span class="material-symbols-rounded">format_indent_increase</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Alignment -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">
+              <span class="material-symbols-rounded">format_align_left</span>
+            </button>
+            <button class="toolbar-btn" data-command="justifyCenter" title="Align Center">
+              <span class="material-symbols-rounded">format_align_center</span>
+            </button>
+            <button class="toolbar-btn" data-command="justifyRight" title="Align Right">
+              <span class="material-symbols-rounded">format_align_right</span>
+            </button>
+            <button class="toolbar-btn" data-command="justifyFull" title="Justify">
+              <span class="material-symbols-rounded">format_align_justify</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Insert -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" id="insertLinkBtn" title="Insert Link (Ctrl+K)">
+              <span class="material-symbols-rounded">add_link</span>
+            </button>
+            <button class="toolbar-btn" id="insertImageBtn" title="Insert Image">
+              <span class="material-symbols-rounded">image</span>
+            </button>
+            <button class="toolbar-btn" id="insertTableBtn" title="Insert Table">
+              <span class="material-symbols-rounded">border_all</span>
+            </button>
+            <button class="toolbar-btn" data-command="insertHorizontalRule" title="Horizontal Rule">
+              <span class="material-symbols-rounded">horizontal_rule</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Block -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" id="blockquoteBtn" title="Blockquote">
+              <span class="material-symbols-rounded">format_quote</span>
+            </button>
+            <button class="toolbar-btn" id="codeBlockBtn" title="Code Block">
+              <span class="material-symbols-rounded">code_blocks</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Utilities -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn toolbar-btn-clear" data-command="removeFormat" title="Clear Formatting">
+              <span class="material-symbols-rounded">format_clear</span>
+            </button>
+            <button class="toolbar-btn" id="printBtn" title="Print Note">
+              <span class="material-symbols-rounded">print</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- READING MODE BAR (hidden by default, shown in reading mode) -->
+        <div class="reading-bar" id="readingBar" style="display:none">
+          <button class="reading-bar-btn" id="exitReadingBtn" title="Exit Reading Mode">
+            <span class="material-symbols-rounded">block</span> Exit Reading Mode
+          </button>
+          <div class="reading-bar-spacer"></div>
+          <button class="reading-bar-btn" id="autoScrollBtn" title="Auto-Scroll">
+            <span class="material-symbols-rounded" id="autoScrollIcon">play_arrow</span> Auto-Scroll
+          </button>
+          <button class="reading-bar-btn" id="speakBtn" title="Listen (Text-to-Speech)">
+            <span class="material-symbols-rounded" id="speakIcon">volume_up</span> Listen
+          </button>
+        </div>
+
+        <!-- Editor content area -->
         <div
           id="noteContent"
           class="note-textarea"
@@ -107,6 +326,48 @@
         <div class="modal-actions">
           <button class="btn-cancel" id="cancelDelete">Cancel</button>
           <button class="btn-confirm-delete" id="confirmDelete">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE INSERTION MODAL -->
+    <div class="modal-overlay" id="tableModalOverlay">
+      <div class="modal table-modal">
+        <h3>Insert Table</h3>
+        <p>Choose table dimensions</p>
+        <div class="table-grid-picker" id="tableGridPicker"></div>
+        <div class="table-size-label" id="tableSizeLabel">Select size</div>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="cancelTable">Cancel</button>
+          <button class="btn-confirm-table" id="confirmTable" disabled>Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINK INSERTION MODAL -->
+    <div class="modal-overlay" id="linkModalOverlay">
+      <div class="modal link-modal">
+        <h3>Insert Link</h3>
+        <p>Enter a URL</p>
+        <input type="text" id="linkUrlInput" class="modal-input" placeholder="https://example.com" />
+        <input type="text" id="linkTextInput" class="modal-input" placeholder="Display text (optional)" />
+        <div class="modal-actions">
+          <button class="btn-cancel" id="cancelLink">Cancel</button>
+          <button class="btn-confirm-table" id="confirmLink">Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGE INSERTION MODAL -->
+    <div class="modal-overlay" id="imageModalOverlay">
+      <div class="modal link-modal">
+        <h3>Insert Image</h3>
+        <p>Enter the image URL</p>
+        <input type="text" id="imageUrlInput" class="modal-input" placeholder="https://example.com/image.png" />
+        <input type="text" id="imageAltInput" class="modal-input" placeholder="Alt text (optional)" />
+        <div class="modal-actions">
+          <button class="btn-cancel" id="cancelImage">Cancel</button>
+          <button class="btn-confirm-table" id="confirmImage">Insert</button>
         </div>
       </div>
     </div>
