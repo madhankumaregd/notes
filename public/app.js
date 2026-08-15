@@ -4,26 +4,19 @@
              Themes, Checklists, Formatting Toolbar,
              Font/Size, Tables, Duplicate Note,
              Reading Mode, Auto-Scroll, TTS,
-             Per-User Isolated Turso Cloud Storage
-   Storage: Private Turso Cloud SQLite per User Device (x-user-id)
+             Per-User Isolated Turso Cloud Storage,
+             User Authentication & Profile
    ============================================= */
 
 const DB_KEY = "noteflow_notes";
 const MIGRATION_KEY = "noteflow_migrated_to_turso_v2";
-const THEME_KEY = "noteflow_theme";
-const USER_ID_KEY = "noteflow_user_id";
+const SESSION_KEY = "noteflow_session";
+const OLD_USER_ID_KEY = "noteflow_user_id";
 
-// Get or generate a unique persistent User ID for privacy/isolation
-function getUserId() {
-  let uid = localStorage.getItem(USER_ID_KEY);
-  if (!uid) {
-    uid = 'usr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    localStorage.setItem(USER_ID_KEY, uid);
-  }
-  return uid;
-}
+// Current session state
+let session = JSON.parse(localStorage.getItem(SESSION_KEY));
+let currentProfile = null;
 
-const userId = getUserId();
 let notes = [];
 let activeNoteId = null;
 let activeTag = "all";
@@ -48,10 +41,8 @@ const newNoteBtn = document.getElementById("newNoteBtn");
 const newNoteBtnLg = document.getElementById("newNoteBtnLg");
 const mobileToggle = document.getElementById("mobileToggle");
 const sidebar = document.getElementById("sidebar");
-const themeSelect = document.getElementById("themeSelect");
 const addChecklistBtn = document.getElementById("addChecklistBtn");
 
-/* Phase 1 & 2 DOM Refs */
 const duplicateNoteBtn = document.getElementById("duplicateNoteBtn");
 const readingModeBtn = document.getElementById("readingModeBtn");
 const exitReadingBtn = document.getElementById("exitReadingBtn");
@@ -61,7 +52,6 @@ const autoScrollIcon = document.getElementById("autoScrollIcon");
 const speakBtn = document.getElementById("speakBtn");
 const speakIcon = document.getElementById("speakIcon");
 
-/* Toolbar DOM Refs */
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const fontFamilySelect = document.getElementById("fontFamilySelect");
@@ -72,7 +62,6 @@ const textColorIndicator = document.getElementById("textColorIndicator");
 const highlightColorPicker = document.getElementById("highlightColorPicker");
 const highlightColorIndicator = document.getElementById("highlightColorIndicator");
 
-/* Modals & Inserts */
 const insertTableBtn = document.getElementById("insertTableBtn");
 const tableModalOverlay = document.getElementById("tableModalOverlay");
 const tableGridPicker = document.getElementById("tableGridPicker");
@@ -98,38 +87,522 @@ const blockquoteBtn = document.getElementById("blockquoteBtn");
 const codeBlockBtn = document.getElementById("codeBlockBtn");
 const printBtn = document.getElementById("printBtn");
 
+/* ---- AUTH & PROFILE DOM REFS ---- */
+const authOverlay = document.getElementById("authOverlay");
+const authTabLogin = document.getElementById("authTabLogin");
+const authTabRegister = document.getElementById("authTabRegister");
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+const loginError = document.getElementById("loginError");
+const registerError = document.getElementById("registerError");
+
+const claimOverlay = document.getElementById("claimOverlay");
+const claimForm = document.getElementById("claimForm");
+const claimError = document.getElementById("claimError");
+const switchToLoginBtn = document.getElementById("switchToLoginBtn");
+
+const profileBtn = document.getElementById("profileBtn");
+const sidebarAvatar = document.getElementById("sidebarAvatar");
+const sidebarDisplayName = document.getElementById("sidebarDisplayName");
+
+const settingsPanel = document.getElementById("settingsPanel");
+const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const profileAvatar = document.getElementById("profileAvatar");
+const profileUsername = document.getElementById("profileUsername");
+const profileDisplayName = document.getElementById("profileDisplayName");
+const profileThemeBtns = document.querySelectorAll(".profile-theme-btn");
+const profileCreatedAt = document.getElementById("profileCreatedAt");
+const profileSaveBtn = document.getElementById("profileSaveBtn");
+const profileLogoutBtn = document.getElementById("profileLogoutBtn");
+
+const themeSettingBtn = document.getElementById("themeSettingBtn");
+const currentThemeLabel = document.getElementById("currentThemeLabel");
+const themePopupOverlay = document.getElementById("themePopupOverlay");
+const themePopupCloseBtn = document.getElementById("themePopupCloseBtn");
+
+const colorPickerSection = document.getElementById("colorPickerSection");
+const colorPickerCanvas = document.getElementById("colorPickerCanvas");
+const colorHueSlider = document.getElementById("colorHueSlider");
+const colorHexInput = document.getElementById("colorHexInput");
+const colorPreviewSwatch = document.getElementById("colorPreviewSwatch");
+const colorHistory = document.getElementById("colorHistory");
+
 /* =============================================
-   THEME LOGIC
+   AUTH & INITIALIZATION LOGIC
    ============================================= */
-function loadTheme() {
-  const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
-  document.body.className = `theme-${savedTheme}`;
-  themeSelect.value = savedTheme;
+
+// Common headers for API requests
+function getAuthHeaders() {
+  if (!session) return { 'Content-Type': 'application/json' };
+  return {
+    'Content-Type': 'application/json',
+    'x-user-id': session.userId
+  };
 }
 
-themeSelect.addEventListener("change", (e) => {
-  const newTheme = e.target.value;
-  document.body.className = `theme-${newTheme}`;
-  localStorage.setItem(THEME_KEY, newTheme);
+async function initApp() {
+  const oldUserId = localStorage.getItem(OLD_USER_ID_KEY);
+
+  if (session) {
+    // Has active session
+    await loadProfile();
+    await loadNotes();
+    applyTheme(currentProfile?.theme, currentProfile?.customAccent);
+  } else if (oldUserId) {
+    // Old anonymous user exists -> Show Claim Modal
+    claimOverlay.style.display = "flex";
+  } else {
+    // New user -> Show Login/Register
+    authOverlay.style.display = "flex";
+  }
+}
+
+// Validation helpers
+function validatePassword(pw) {
+  const rules = {
+    len: pw.length >= 6,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    num: /[0-9]/.test(pw)
+  };
+  return rules;
+}
+
+function updatePwRulesUI(rulesObj, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const ids = {
+    len: container.querySelector('[id$="RuleLen"]'),
+    upper: container.querySelector('[id$="RuleUpper"]'),
+    lower: container.querySelector('[id$="RuleLower"]'),
+    num: container.querySelector('[id$="RuleNum"]')
+  };
+  
+  if (ids.len) { ids.len.className = rulesObj.len ? "pw-rule valid" : "pw-rule"; ids.len.innerHTML = rulesObj.len ? "✓ Min 6 characters" : "✕ Min 6 characters"; }
+  if (ids.upper) { ids.upper.className = rulesObj.upper ? "pw-rule valid" : "pw-rule"; ids.upper.innerHTML = rulesObj.upper ? "✓ One uppercase" : "✕ One uppercase"; }
+  if (ids.lower) { ids.lower.className = rulesObj.lower ? "pw-rule valid" : "pw-rule"; ids.lower.innerHTML = rulesObj.lower ? "✓ One lowercase" : "✕ One lowercase"; }
+  if (ids.num) { ids.num.className = rulesObj.num ? "pw-rule valid" : "pw-rule"; ids.num.innerHTML = rulesObj.num ? "✓ One number" : "✕ One number"; }
+}
+
+// Setup Auth Listeners
+authTabLogin.addEventListener("click", () => {
+  authTabLogin.classList.add("active");
+  authTabRegister.classList.remove("active");
+  loginForm.style.display = "flex";
+  registerForm.style.display = "none";
 });
+
+authTabRegister.addEventListener("click", () => {
+  authTabRegister.classList.add("active");
+  authTabLogin.classList.remove("active");
+  registerForm.style.display = "flex";
+  loginForm.style.display = "none";
+});
+
+document.querySelectorAll(".auth-toggle-pw").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    const input = e.currentTarget.previousElementSibling;
+    const icon = e.currentTarget.querySelector("span");
+    if (input.type === "password") {
+      input.type = "text";
+      icon.textContent = "visibility_off";
+    } else {
+      input.type = "password";
+      icon.textContent = "visibility";
+    }
+  });
+});
+
+document.getElementById("regPassword").addEventListener("input", (e) => {
+  updatePwRulesUI(validatePassword(e.target.value), "regPwRules");
+});
+
+document.getElementById("claimPassword").addEventListener("input", (e) => {
+  updatePwRulesUI(validatePassword(e.target.value), "claimPwRules");
+});
+
+switchToLoginBtn.addEventListener("click", () => {
+  claimOverlay.style.display = "none";
+  authOverlay.style.display = "flex";
+  authTabLogin.click();
+});
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginError.textContent = "";
+  const btn = document.getElementById("loginSubmit");
+  btn.disabled = true;
+  btn.textContent = "Logging in...";
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById("loginUsername").value,
+        password: document.getElementById("loginPassword").value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Login failed");
+
+    finishLogin(data);
+  } catch (err) {
+    loginError.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Login";
+  }
+});
+
+registerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  registerError.textContent = "";
+  const pw = document.getElementById("regPassword").value;
+  const confirm = document.getElementById("regConfirmPassword").value;
+  
+  if (pw !== confirm) {
+    return registerError.textContent = "Passwords do not match.";
+  }
+  const rules = validatePassword(pw);
+  if (!rules.len || !rules.upper || !rules.lower || !rules.num) {
+    return registerError.textContent = "Password does not meet requirements.";
+  }
+
+  const btn = document.getElementById("registerSubmit");
+  btn.disabled = true;
+  btn.textContent = "Creating Account...";
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        displayName: document.getElementById("regDisplayName").value,
+        username: document.getElementById("regUsername").value,
+        password: pw
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Registration failed");
+
+    finishLogin(data);
+  } catch (err) {
+    registerError.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Create Account";
+  }
+});
+
+claimForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  claimError.textContent = "";
+  const pw = document.getElementById("claimPassword").value;
+  const rules = validatePassword(pw);
+  if (!rules.len || !rules.upper || !rules.lower || !rules.num) {
+    return claimError.textContent = "Password does not meet requirements.";
+  }
+
+  const btn = claimForm.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = "Securing Notes...";
+
+  try {
+    const res = await fetch('/api/auth/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        oldUserId: localStorage.getItem(OLD_USER_ID_KEY),
+        displayName: document.getElementById("claimDisplayName").value,
+        username: document.getElementById("claimUsername").value,
+        password: pw
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Claim failed");
+
+    finishLogin(data);
+  } catch (err) {
+    claimError.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Secure My Notes";
+  }
+});
+
+function finishLogin(data) {
+  session = { userId: data.userId, username: data.username };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  
+  // Cleanup old unneeded keys
+  localStorage.removeItem(OLD_USER_ID_KEY);
+  
+  authOverlay.style.display = "none";
+  claimOverlay.style.display = "none";
+  
+  initApp(); // reload profile and notes
+}
+
+function handleLogout() {
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(DB_KEY);
+  location.reload();
+}
+
+/* =============================================
+   PROFILE LOGIC
+   ============================================= */
+
+async function loadProfile() {
+  try {
+    const res = await fetch('/api/profile', { headers: getAuthHeaders() });
+    if (res.ok) {
+      currentProfile = await res.json();
+      updateProfileUI();
+    }
+  } catch (err) {
+    console.error("Failed to load profile", err);
+  }
+}
+
+function updateProfileUI() {
+  if (!currentProfile) return;
+  const name = currentProfile.displayName || currentProfile.username;
+  sidebarDisplayName.textContent = name;
+  sidebarAvatar.textContent = name.charAt(0).toUpperCase();
+  
+  profileDisplayName.value = currentProfile.displayName || "";
+  profileUsername.textContent = "@" + currentProfile.username;
+  profileAvatar.textContent = name.charAt(0).toUpperCase();
+  
+  const d = new Date(currentProfile.createdAt);
+  profileCreatedAt.textContent = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  
+  selectThemeBtn(currentProfile.theme);
+  updateThemeLabel(currentProfile.theme);
+  
+  if (currentProfile.theme === "custom" && currentProfile.customAccent) {
+    updateCustomAccent(currentProfile.customAccent);
+  }
+}
+
+function updateThemeLabel(theme) {
+  if (!currentThemeLabel) return;
+  if (theme === 'dark') currentThemeLabel.textContent = "Dark Theme";
+  else if (theme === 'light') currentThemeLabel.textContent = "Light Theme";
+  else if (theme === 'ocean') currentThemeLabel.textContent = "Ocean Theme";
+  else currentThemeLabel.textContent = "Custom Theme";
+}
+
+function applyTheme(theme = "dark", customAccent = null) {
+  document.body.className = `theme-${theme}`;
+  if (theme === "custom" && customAccent) {
+    document.body.style.setProperty("--custom-accent", customAccent);
+    
+    // Calculate a dimmer version for glow/hover
+    // A simple hack without a full color library: just drop opacity
+    document.body.style.setProperty("--custom-accent-glow", `${customAccent}22`); // Hex + alpha
+    
+    colorHexInput.value = customAccent;
+    colorPreviewSwatch.style.background = customAccent;
+  }
+  updateThemeLabel(theme);
+}
+
+function selectThemeBtn(theme) {
+  profileThemeBtns.forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.theme === theme);
+  });
+  colorPickerSection.style.display = theme === "custom" ? "block" : "none";
+  if (theme === "custom") {
+    setTimeout(initColorPicker, 10);
+  }
+}
+
+profileThemeBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const theme = btn.dataset.theme;
+    selectThemeBtn(theme);
+    const accent = (theme === "custom") ? colorHexInput.value : null;
+    applyTheme(theme, accent);
+  });
+});
+
+profileBtn.addEventListener("click", () => {
+  emptyState.style.display = "none";
+  editorPanel.style.display = "none";
+  settingsPanel.style.display = "flex";
+  if (window.innerWidth <= 768) sidebar.classList.remove("open");
+});
+
+settingsCloseBtn.addEventListener("click", () => {
+  settingsPanel.style.display = "none";
+  renderEditor();
+});
+
+themeSettingBtn.addEventListener("click", () => {
+  themePopupOverlay.classList.add("open");
+});
+
+themePopupCloseBtn.addEventListener("click", () => {
+  themePopupOverlay.classList.remove("open");
+});
+
+[themePopupOverlay].forEach(modal => {
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.remove("open");
+  });
+});
+
+profileLogoutBtn.addEventListener("click", handleLogout);
+
+profileSaveBtn.addEventListener("click", async () => {
+  profileSaveBtn.textContent = "Saving...";
+  profileSaveBtn.disabled = true;
+  
+  const selectedTheme = document.querySelector(".profile-theme-btn.active")?.dataset.theme || "dark";
+  const customAccent = selectedTheme === "custom" ? colorHexInput.value : null;
+  const displayName = profileDisplayName.value.trim();
+
+  try {
+    await fetch('/api/profile', {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ displayName, theme: selectedTheme, customAccent })
+    });
+    
+    await loadProfile();
+    settingsPanel.style.display = "none";
+    renderEditor();
+  } catch (err) {
+    console.error("Failed to save profile", err);
+  } finally {
+    profileSaveBtn.textContent = "Save Changes";
+    profileSaveBtn.disabled = false;
+  }
+});
+
+/* =============================================
+   COLOR PICKER CANVAS
+   ============================================= */
+
+let colorCtx = colorPickerCanvas.getContext("2d");
+let isDraggingColor = false;
+let recentColors = ["#e8b86d", "#4ade80", "#38bdf8", "#ec4899", "#8b5cf6"];
+
+function drawColorCanvas(hue) {
+  const width = colorPickerCanvas.width;
+  const height = colorPickerCanvas.height;
+  
+  colorCtx.clearRect(0, 0, width, height);
+
+  // Base hue
+  colorCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+  colorCtx.fillRect(0, 0, width, height);
+
+  // White gradient (left to right)
+  let gradWhite = colorCtx.createLinearGradient(0, 0, width, 0);
+  gradWhite.addColorStop(0, "rgba(255,255,255,1)");
+  gradWhite.addColorStop(1, "rgba(255,255,255,0)");
+  colorCtx.fillStyle = gradWhite;
+  colorCtx.fillRect(0, 0, width, height);
+
+  // Black gradient (bottom to top)
+  let gradBlack = colorCtx.createLinearGradient(0, height, 0, 0);
+  gradBlack.addColorStop(0, "rgba(0,0,0,1)");
+  gradBlack.addColorStop(1, "rgba(0,0,0,0)");
+  colorCtx.fillStyle = gradBlack;
+  colorCtx.fillRect(0, 0, width, height);
+}
+
+function initColorPicker() {
+  drawColorCanvas(colorHueSlider.value);
+  renderRecentColors();
+}
+
+colorHueSlider.addEventListener("input", (e) => {
+  drawColorCanvas(e.target.value);
+});
+
+function pickColor(e) {
+  const rect = colorPickerCanvas.getBoundingClientRect();
+  let x = e.clientX - rect.left;
+  let y = e.clientY - rect.top;
+  
+  x = Math.max(0, Math.min(x, colorPickerCanvas.width - 1));
+  y = Math.max(0, Math.min(y, colorPickerCanvas.height - 1));
+
+  const imgData = colorCtx.getImageData(x, y, 1, 1).data;
+  const hex = "#" + [imgData[0], imgData[1], imgData[2]].map(x => {
+    const h = x.toString(16);
+    return h.length === 1 ? "0" + h : h;
+  }).join("");
+  
+  updateCustomAccent(hex);
+}
+
+function updateCustomAccent(hex) {
+  colorHexInput.value = hex;
+  colorPreviewSwatch.style.background = hex;
+  if (document.querySelector(".profile-theme-btn.active")?.dataset.theme === "custom") {
+    applyTheme("custom", hex);
+  }
+}
+
+colorPickerCanvas.addEventListener("mousedown", (e) => {
+  isDraggingColor = true;
+  pickColor(e);
+});
+window.addEventListener("mouseup", () => {
+  if (isDraggingColor) {
+    isDraggingColor = false;
+    addToRecentColors(colorHexInput.value);
+  }
+});
+colorPickerCanvas.addEventListener("mousemove", (e) => {
+  if (isDraggingColor) pickColor(e);
+});
+
+colorHexInput.addEventListener("change", (e) => {
+  let val = e.target.value;
+  if (!val.startsWith("#")) val = "#" + val;
+  if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+    updateCustomAccent(val);
+    addToRecentColors(val);
+  }
+});
+
+function addToRecentColors(hex) {
+  if (recentColors.includes(hex)) return;
+  recentColors.unshift(hex);
+  if (recentColors.length > 8) recentColors.pop();
+  renderRecentColors();
+}
+
+function renderRecentColors() {
+  colorHistory.innerHTML = '<span class="color-history-label">Recent:</span>';
+  recentColors.forEach(c => {
+    const swatch = document.createElement("div");
+    swatch.className = "color-history-swatch";
+    swatch.style.background = c;
+    swatch.title = c;
+    swatch.addEventListener("click", () => {
+      updateCustomAccent(c);
+    });
+    colorHistory.appendChild(swatch);
+  });
+}
+
 
 /* =============================================
    PER-USER TURSO CLOUD DB STORAGE & MIGRATION
    ============================================= */
 
-// Common headers for user-isolated API requests
-function getAuthHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'x-user-id': userId
-  };
-}
-
-// Load notes for THIS USER ONLY from Turso Cloud
 async function loadNotes() {
   setSaveStatus("saving");
 
-  // Step 1: Migration check for existing local notes for this user
+  // Migration: Bulk sync old local notes if they haven't been pushed
   const hasMigrated = localStorage.getItem(MIGRATION_KEY);
   if (!hasMigrated) {
     try {
@@ -137,13 +610,12 @@ async function loadNotes() {
       const localNotes = localRaw ? JSON.parse(localRaw) : [];
       
       if (localNotes.length > 0) {
-        console.log(`🔒 Migrating ${localNotes.length} local notes securely under User ID: ${userId}`);
+        console.log(`🔒 Migrating ${localNotes.length} local notes securely under User ID: ${session.userId}`);
         await fetch('/api/notes', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify(localNotes)
         });
-        console.log('✅ Notes successfully migrated under private user storage!');
       }
       localStorage.setItem(MIGRATION_KEY, "true");
     } catch (err) {
@@ -151,7 +623,7 @@ async function loadNotes() {
     }
   }
 
-  // Step 2: Fetch notes scoped to current userId
+  // Fetch notes scoped to current userId
   try {
     const res = await fetch('/api/notes', {
       headers: getAuthHeaders()
@@ -172,7 +644,6 @@ async function loadNotes() {
   render();
 }
 
-// Save single note to user's Turso Cloud account
 async function saveNoteToCloud(note) {
   try {
     await fetch('/api/notes', {
@@ -187,7 +658,6 @@ async function saveNoteToCloud(note) {
   }
 }
 
-// Delete note from user's Turso Cloud account
 async function deleteNoteFromCloud(id) {
   try {
     await fetch(`/api/notes/${id}`, {
@@ -337,6 +807,8 @@ function renderNotesList() {
 
 function renderEditor() {
   const note = notes.find((n) => n.id === activeNoteId);
+  settingsPanel.style.display = "none"; // Hide settings if we're explicitly rendering editor
+  
   if (!note) {
     emptyState.style.display = "flex";
     editorPanel.style.display = "none";
@@ -873,7 +1345,6 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* =============================================
-   INIT
+   START
    ============================================= */
-loadTheme();
-loadNotes();
+initApp();

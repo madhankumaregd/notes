@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Noteflow — Your Ideas, Organized</title>
-    <meta name="description" content="Noteflow is a beautiful, distraction-free note-taking app with rich formatting, tagging, search, and themes — all stored locally in your browser." />
+    <meta name="description" content="Noteflow is a beautiful, distraction-free note-taking app with rich formatting, tagging, search, and themes — all stored securely in the cloud." />
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -12,10 +12,206 @@
       rel="stylesheet"
     />
     <!-- Material Symbols for Word-like icons -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=add_link,arrow_drop_down,block,border_all,check_box,code_blocks,content_copy,delete,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_list_bulleted,format_list_numbered,format_paint,format_quote,format_size,format_strikethrough,format_underlined,horizontal_rule,image,menu_book,pause,play_arrow,print,redo,search,stop,subscript,superscript,text_to_speech,undo,volume_up&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=account_circle,add_link,arrow_drop_down,block,border_all,check_box,chevron_right,close,code_blocks,content_copy,delete,edit,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_list_bulleted,format_list_numbered,format_paint,format_quote,format_size,format_strikethrough,format_underlined,horizontal_rule,image,lock,logout,menu_book,palette,pause,person,play_arrow,print,redo,search,settings,stop,subscript,superscript,text_to_speech,undo,visibility,visibility_off,volume_up&display=swap" />
   </head>
   <body class="theme-dark">
+
+    <!-- ============================================= -->
+    <!-- AUTH MODAL (Login / Register) -->
+    <!-- ============================================= -->
+    <div class="auth-overlay" id="authOverlay">
+      <div class="auth-card">
+        <div class="auth-header">
+          <span class="auth-logo">✦</span>
+          <h1 class="auth-title">Noteflow</h1>
+          <p class="auth-subtitle">Your Ideas, Organized</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login" id="authTabLogin">Login</button>
+          <button class="auth-tab" data-tab="register" id="authTabRegister">Register</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form class="auth-form" id="loginForm">
+          <div class="auth-field">
+            <label for="loginUsername">Username</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">person</span>
+              <input type="text" id="loginUsername" placeholder="your_username" autocomplete="username" required />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="loginPassword">Password</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">lock</span>
+              <input type="password" id="loginPassword" placeholder="••••••" autocomplete="current-password" required />
+              <button type="button" class="auth-toggle-pw" id="loginTogglePw" tabindex="-1">
+                <span class="material-symbols-rounded">visibility</span>
+              </button>
+            </div>
+          </div>
+          <div class="auth-error" id="loginError"></div>
+          <button type="submit" class="auth-submit" id="loginSubmit">Login</button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form class="auth-form" id="registerForm" style="display:none">
+          <div class="auth-field">
+            <label for="regDisplayName">Display Name</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">person</span>
+              <input type="text" id="regDisplayName" placeholder="Madhan Kumar" />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="regUsername">Username</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">person</span>
+              <input type="text" id="regUsername" placeholder="madhan_kumar" autocomplete="username" required />
+            </div>
+            <div class="auth-hint" id="regUsernameHint">Letters, numbers, _ and . only. Min 3 chars.</div>
+          </div>
+          <div class="auth-field">
+            <label for="regPassword">Password</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">lock</span>
+              <input type="password" id="regPassword" placeholder="••••••" autocomplete="new-password" required />
+              <button type="button" class="auth-toggle-pw" id="regTogglePw" tabindex="-1">
+                <span class="material-symbols-rounded">visibility</span>
+              </button>
+            </div>
+            <div class="auth-pw-rules" id="regPwRules">
+              <span class="pw-rule" id="pwRuleLen">✕ Min 6 characters</span>
+              <span class="pw-rule" id="pwRuleUpper">✕ One uppercase</span>
+              <span class="pw-rule" id="pwRuleLower">✕ One lowercase</span>
+              <span class="pw-rule" id="pwRuleNum">✕ One number</span>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="regConfirmPassword">Confirm Password</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">lock</span>
+              <input type="password" id="regConfirmPassword" placeholder="••••••" autocomplete="new-password" required />
+            </div>
+          </div>
+          <div class="auth-error" id="registerError"></div>
+          <button type="submit" class="auth-submit" id="registerSubmit">Create Account</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- CLAIM ACCOUNT MODAL (for existing anon users) -->
+    <!-- ============================================= -->
+    <div class="auth-overlay" id="claimOverlay" style="display:none">
+      <div class="auth-card">
+        <div class="auth-header">
+          <span class="auth-logo">✦</span>
+          <h1 class="auth-title">Welcome back!</h1>
+          <p class="auth-subtitle">Secure your notes with a username & password.<br/>Your existing notes will be preserved.</p>
+        </div>
+
+        <form class="auth-form" id="claimForm">
+          <div class="auth-field">
+            <label for="claimDisplayName">Display Name</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">person</span>
+              <input type="text" id="claimDisplayName" placeholder="Your name" />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="claimUsername">Choose a Username</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">person</span>
+              <input type="text" id="claimUsername" placeholder="your_username" autocomplete="username" required />
+            </div>
+            <div class="auth-hint">Letters, numbers, _ and . only. Min 3 chars.</div>
+          </div>
+          <div class="auth-field">
+            <label for="claimPassword">Create a Password</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-rounded">lock</span>
+              <input type="password" id="claimPassword" placeholder="••••••" autocomplete="new-password" required />
+              <button type="button" class="auth-toggle-pw" id="claimTogglePw" tabindex="-1">
+                <span class="material-symbols-rounded">visibility</span>
+              </button>
+            </div>
+            <div class="auth-pw-rules" id="claimPwRules">
+              <span class="pw-rule" id="claimPwRuleLen">✕ Min 6 characters</span>
+              <span class="pw-rule" id="claimPwRuleUpper">✕ One uppercase</span>
+              <span class="pw-rule" id="claimPwRuleLower">✕ One lowercase</span>
+              <span class="pw-rule" id="claimPwRuleNum">✕ One number</span>
+            </div>
+          </div>
+          <div class="auth-error" id="claimError"></div>
+          <button type="submit" class="auth-submit">Secure My Notes</button>
+          <div style="text-align:center; margin-top: 16px;">
+            <button type="button" id="switchToLoginBtn" style="background:none; border:none; color:#e8b86d; cursor:pointer; font-size:13px; font-family:'DM Sans', sans-serif;">Already secured? Log in here</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- PROFILE SETTINGS PANEL (moved to main content) -->
+
+    <!-- THEME POPUP MODAL -->
+    <div class="modal-overlay" id="themePopupOverlay">
+      <div class="modal theme-popup">
+        <div class="theme-popup-header">
+          <h3>Appearance</h3>
+          <button class="profile-close-btn" id="themePopupCloseBtn">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        
+        <div class="theme-popup-content">
+          <div class="profile-theme-options">
+            <button class="profile-theme-btn" data-theme="dark" title="Dark">
+              <span class="theme-preview theme-preview-dark"></span>
+              Dark
+            </button>
+            <button class="profile-theme-btn" data-theme="light" title="Light">
+              <span class="theme-preview theme-preview-light"></span>
+              Light
+            </button>
+            <button class="profile-theme-btn" data-theme="ocean" title="Ocean">
+              <span class="theme-preview theme-preview-ocean"></span>
+              Ocean
+            </button>
+            <button class="profile-theme-btn" data-theme="custom" title="Custom">
+              <span class="theme-preview theme-preview-custom">
+                <span class="material-symbols-rounded" style="font-size:14px">palette</span>
+              </span>
+              Custom
+            </button>
+          </div>
+
+          <!-- Custom Color Picker -->
+          <div class="color-picker-section" id="colorPickerSection" style="display:none; margin-top:20px;">
+            <label style="font-size:12px; color:var(--text-muted); margin-bottom:8px; display:block; text-transform:uppercase; font-weight:500;">Accent Color</label>
+            <div class="color-picker-wrap">
+              <canvas id="colorPickerCanvas" class="color-picker-canvas" width="220" height="150"></canvas>
+              <div class="color-picker-controls">
+                <label class="color-hue-label">Hue</label>
+                <input type="range" id="colorHueSlider" class="color-hue-slider" min="0" max="360" value="36" />
+                <div class="color-preview-row">
+                  <div class="color-preview-swatch" id="colorPreviewSwatch" style="background:#e8b86d"></div>
+                  <input type="text" id="colorHexInput" class="color-hex-input" value="#e8b86d" maxlength="7" />
+                </div>
+              </div>
+            </div>
+            <div class="color-history" id="colorHistory">
+              <span class="color-history-label">Recent:</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================= -->
     <!-- SIDEBAR -->
+    <!-- ============================================= -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo">
@@ -23,15 +219,6 @@
           <span class="logo-text">Noteflow</span>
         </div>
         <button class="new-note-btn" id="newNoteBtn">+ New Note</button>
-      </div>
-
-      <!-- Theme Switcher -->
-      <div class="theme-switcher-wrap">
-        <select id="themeSelect" class="theme-select">
-          <option value="dark">Dark Theme</option>
-          <option value="light">Light Theme</option>
-          <option value="ocean">Ocean Theme</option>
-        </select>
       </div>
 
       <div class="search-wrap">
@@ -52,9 +239,20 @@
       </div>
 
       <div class="notes-list" id="notesList"></div>
+
+      <!-- Profile Button at bottom of sidebar -->
+      <div class="sidebar-profile" id="sidebarProfile">
+        <button class="sidebar-profile-btn" id="profileBtn" title="Profile & Settings">
+          <span class="sidebar-profile-avatar" id="sidebarAvatar">?</span>
+          <span class="sidebar-profile-name" id="sidebarDisplayName">User</span>
+          <span class="material-symbols-rounded" style="font-size:18px">settings</span>
+        </button>
+      </div>
     </aside>
 
+    <!-- ============================================= -->
     <!-- MAIN EDITOR -->
+    <!-- ============================================= -->
     <main class="main" id="main">
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">✦</div>
@@ -63,6 +261,58 @@
         <button class="new-note-btn-lg" id="newNoteBtnLg">
           Create your first note
         </button>
+      </div>
+
+      <div class="settings-panel" id="settingsPanel" style="display: none">
+        <div class="settings-container">
+          <div class="settings-header">
+            <h2>Settings</h2>
+            <button class="profile-close-btn" id="settingsCloseBtn">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+
+          <div class="settings-content">
+            <div class="profile-avatar-large" id="profileAvatar">M</div>
+            <div class="profile-username-large" id="profileUsername">@username</div>
+            
+            <div class="profile-settings-list">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h4>Display Name</h4>
+                  <p>Your public facing name</p>
+                </div>
+                <div class="setting-control">
+                  <input type="text" id="profileDisplayName" class="setting-input" placeholder="Your display name" />
+                </div>
+              </div>
+
+              <div class="setting-item" id="themeSettingBtn" style="cursor:pointer">
+                <div class="setting-info">
+                  <h4>Theme & Appearance</h4>
+                  <p id="currentThemeLabel">Dark Theme</p>
+                </div>
+                <div class="setting-control">
+                  <span class="material-symbols-rounded" style="color:var(--text-muted)">chevron_right</span>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h4>Member Since</h4>
+                  <p id="profileCreatedAt">—</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-actions">
+              <button class="btn-save-large" id="profileSaveBtn">Save Changes</button>
+              <button class="btn-logout-large" id="profileLogoutBtn">
+                <span class="material-symbols-rounded">logout</span> Logout
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="editor-panel" id="editorPanel" style="display: none">
