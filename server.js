@@ -241,6 +241,44 @@ app.post('/api/auth/claim', async (req, res) => {
   }
 });
 
+// PUT /api/auth/password - Change password
+app.put('/api/auth/password', async (req, res) => {
+  if (!turso) return res.status(500).json({ error: 'Database not connected' });
+  try {
+    const userId = req.headers['x-user-id'];
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing password fields' });
+    
+    const passwordErr = validatePassword(newPassword);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
+
+    const result = await turso.execute({
+      sql: 'SELECT password_hash FROM users WHERE id = ?',
+      args: [userId]
+    });
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    
+    const user = result.rows[0];
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Incorrect current password' });
+    
+    const newHash = await bcrypt.hash(newPassword, 10);
+    
+    await turso.execute({
+      sql: 'UPDATE users SET password_hash = ? WHERE id = ?',
+      args: [newHash, userId]
+    });
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Password change error:', err);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 /* =============================================
    PROFILE ROUTES
    ============================================= */

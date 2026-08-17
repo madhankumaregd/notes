@@ -209,6 +209,56 @@
       </div>
     </div>
 
+    <!-- DISPLAY NAME EDIT MODAL -->
+    <div class="modal-overlay" id="displayNameModalOverlay">
+      <div class="modal theme-popup">
+        <div class="theme-popup-header">
+          <h3>Edit Display Name</h3>
+          <button class="profile-close-btn" id="displayNameCloseBtn">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="theme-popup-content" style="padding-top: 16px;">
+          <input type="text" id="editDisplayNameInput" class="modal-input" placeholder="Your new display name" />
+          <button class="auth-submit" id="saveDisplayNameBtn" style="margin-top: 12px; padding: 12px;">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANGE PASSWORD MODAL -->
+    <div class="modal-overlay" id="passwordModalOverlay">
+      <div class="modal theme-popup">
+        <div class="theme-popup-header">
+          <h3>Change Password</h3>
+          <button class="profile-close-btn" id="passwordCloseBtn">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="theme-popup-content" style="padding-top: 16px; text-align: left;">
+          <div class="auth-field">
+            <label for="currentPasswordInput" style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block;">Current Password</label>
+            <input type="password" id="currentPasswordInput" class="modal-input" placeholder="••••••" />
+          </div>
+          <div class="auth-field">
+            <label for="newPasswordInput" style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block;">New Password</label>
+            <input type="password" id="newPasswordInput" class="modal-input" placeholder="••••••" />
+            <div class="auth-pw-rules" id="newPwRules" style="margin-bottom: 12px;">
+              <span class="pw-rule" id="newPwRuleLen">✕ Min 6 characters</span>
+              <span class="pw-rule" id="newPwRuleUpper">✕ One uppercase</span>
+              <span class="pw-rule" id="newPwRuleLower">✕ One lowercase</span>
+              <span class="pw-rule" id="newPwRuleNum">✕ One number</span>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="confirmNewPasswordInput" style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block;">Confirm New Password</label>
+            <input type="password" id="confirmNewPasswordInput" class="modal-input" placeholder="••••••" />
+          </div>
+          <div class="auth-error" id="passwordError" style="font-size:12px; margin-bottom:12px;"></div>
+          <button class="auth-submit" id="savePasswordBtn" style="padding: 12px;">Update Password</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ============================================= -->
     <!-- SIDEBAR -->
     <!-- ============================================= -->
@@ -277,13 +327,24 @@
             <div class="profile-username-large" id="profileUsername">@username</div>
             
             <div class="profile-settings-list">
-              <div class="setting-item">
+              <div class="setting-item" id="displayNameSettingBtn" style="cursor:pointer">
                 <div class="setting-info">
                   <h4>Display Name</h4>
                   <p>Your public facing name</p>
                 </div>
+                <div class="setting-control" style="gap: 8px;">
+                  <span id="profileDisplayNameDisplay" style="color:var(--text-primary); font-size:14px; font-weight:500;">User</span>
+                  <span class="material-symbols-rounded" style="color:var(--text-muted); font-size:18px;">edit</span>
+                </div>
+              </div>
+
+              <div class="setting-item" id="passwordSettingBtn" style="cursor:pointer">
+                <div class="setting-info">
+                  <h4>Password</h4>
+                  <p>Change your account password</p>
+                </div>
                 <div class="setting-control">
-                  <input type="text" id="profileDisplayName" class="setting-input" placeholder="Your display name" />
+                  <span class="material-symbols-rounded" style="color:var(--text-muted)">chevron_right</span>
                 </div>
               </div>
 
@@ -306,7 +367,6 @@
             </div>
 
             <div class="settings-actions">
-              <button class="btn-save-large" id="profileSaveBtn">Save Changes</button>
               <button class="btn-logout-large" id="profileLogoutBtn">
                 <span class="material-symbols-rounded">logout</span> Logout
               </button>
