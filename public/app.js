@@ -15,6 +15,19 @@ const OLD_USER_ID_KEY = "noteflow_user_id";
 
 // Current session state
 let session = JSON.parse(localStorage.getItem(SESSION_KEY));
+if (session && session.expiresAt && Date.now() > session.expiresAt) {
+  session = null;
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// Auto-logout if session expires while tab is open
+setInterval(() => {
+  let curSession = JSON.parse(localStorage.getItem(SESSION_KEY));
+  if (curSession && curSession.expiresAt && Date.now() > curSession.expiresAt) {
+    handleLogout();
+  }
+}, 60000);
+
 let currentProfile = null;
 
 let notes = [];
@@ -161,6 +174,8 @@ async function initApp() {
 
   if (session) {
     // Has active session
+    authOverlay.style.display = "none";
+    claimOverlay.style.display = "none";
     await loadProfile();
     await loadNotes();
     applyTheme(currentProfile?.theme, currentProfile?.customAccent);
@@ -348,7 +363,11 @@ claimForm.addEventListener("submit", async (e) => {
 });
 
 function finishLogin(data) {
-  session = { userId: data.userId, username: data.username };
+  session = { 
+    userId: data.userId, 
+    username: data.username,
+    expiresAt: Date.now() + (3 * 24 * 60 * 60 * 1000) // 3 days
+  };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   
   // Cleanup old unneeded keys
