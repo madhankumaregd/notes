@@ -100,6 +100,9 @@ const blockquoteBtn = document.getElementById("blockquoteBtn");
 const codeBlockBtn = document.getElementById("codeBlockBtn");
 const printBtn = document.getElementById("printBtn");
 
+const toolbarMenuBtn = document.getElementById("toolbarMenuBtn");
+const toolbarExtras = document.getElementById("toolbarExtras");
+
 /* ---- AUTH & PROFILE DOM REFS ---- */
 const authOverlay = document.getElementById("authOverlay");
 const authTabLogin = document.getElementById("authTabLogin");
@@ -1438,6 +1441,27 @@ newNoteBtnLg.addEventListener("click", createNote);
 noteTitleInput.addEventListener("input", autoSave);
 tagInput.addEventListener("input", autoSave);
 noteContent.addEventListener("input", autoSave); 
+
+document.addEventListener("selectionchange", updateActiveFormats);
+noteContent.addEventListener("keyup", updateActiveFormats);
+noteContent.addEventListener("mouseup", updateActiveFormats);
+
+if (toolbarMenuBtn) {
+  toolbarMenuBtn.addEventListener("click", () => {
+    if (toolbarExtras) {
+      toolbarExtras.classList.toggle("show");
+    }
+  });
+}
+
+// Ensure clicking outside toolbar hides extras on mobile
+document.addEventListener("click", (e) => {
+  if (toolbarExtras && toolbarExtras.classList.contains("show")) {
+    if (!toolbarMenuBtn.contains(e.target) && !toolbarExtras.contains(e.target)) {
+      toolbarExtras.classList.remove("show");
+    }
+  }
+});
 
 noteContent.addEventListener("change", (e) => {
   if (e.target.type === "checkbox") {

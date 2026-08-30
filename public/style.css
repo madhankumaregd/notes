@@ -627,8 +627,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
   flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .btn-tool {
@@ -1468,6 +1468,11 @@ body.reading-mode .mobile-toggle {
   }
 }
 
+/* ---- TOOLBAR EXTRAS ---- */
+.toolbar-extras {
+  display: contents;
+}
+
 /* ---- RESPONSIVE ---- */
 @media (max-width: 768px) {
   .sidebar {
@@ -1503,6 +1508,18 @@ body.reading-mode .mobile-toggle {
   .formatting-toolbar {
     padding: 4px 10px;
     gap: 1px;
+  }
+  
+  #toolbarMenuBtn {
+    display: inline-flex !important;
+  }
+  
+  .toolbar-extras {
+    display: none;
+  }
+  
+  .toolbar-extras.show {
+    display: contents;
   }
 
   .toolbar-select-font {

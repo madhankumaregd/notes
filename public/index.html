@@ -414,6 +414,12 @@
 
         <!-- FORMATTING TOOLBAR -->
         <div class="formatting-toolbar" id="formattingToolbar">
+          
+          <button class="toolbar-btn" id="toolbarMenuBtn" title="More options" style="display:none">
+            <span class="material-symbols-rounded">menu</span>
+          </button>
+          
+          <div class="toolbar-divider" id="toolbarMenuDivider" style="display:none"></div>
 
           <!-- Undo / Redo -->
           <div class="toolbar-group">
@@ -426,8 +432,24 @@
           </div>
 
           <div class="toolbar-divider"></div>
+          
+          <!-- Text Formatting (Important) -->
+          <div class="toolbar-group">
+            <button class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
+              <span class="material-symbols-rounded">format_bold</span>
+            </button>
+            <button class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
+              <span class="material-symbols-rounded">format_italic</span>
+            </button>
+            <button class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
+              <span class="material-symbols-rounded">format_underlined</span>
+            </button>
+          </div>
+          
+          <div class="toolbar-extras" id="toolbarExtras">
+            <div class="toolbar-divider"></div>
 
-          <!-- Font Family -->
+            <!-- Font Family -->
           <div class="toolbar-group">
             <select id="fontFamilySelect" class="toolbar-select toolbar-select-font" title="Font Family">
               <option value="DM Sans">DM Sans</option>
@@ -472,20 +494,10 @@
               <option value="h6">Heading 6</option>
             </select>
           </div>
-
           <div class="toolbar-divider"></div>
 
-          <!-- Text Formatting -->
+          <!-- Extra Text Formatting -->
           <div class="toolbar-group">
-            <button class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
-              <span class="material-symbols-rounded">format_bold</span>
-            </button>
-            <button class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
-              <span class="material-symbols-rounded">format_italic</span>
-            </button>
-            <button class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
-              <span class="material-symbols-rounded">format_underlined</span>
-            </button>
             <button class="toolbar-btn" data-command="strikeThrough" title="Strikethrough">
               <span class="material-symbols-rounded">format_strikethrough</span>
             </button>
