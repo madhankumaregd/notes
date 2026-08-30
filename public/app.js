@@ -179,6 +179,22 @@ async function initApp() {
     // Has active session
     authOverlay.style.display = "none";
     claimOverlay.style.display = "none";
+    
+    // Immediately apply cached session profile so UI is never blank
+    if (!currentProfile && session.username) {
+      currentProfile = {
+        userId: session.userId,
+        username: session.username,
+        displayName: session.displayName || session.username,
+        theme: session.theme || 'dark',
+        customAccent: session.customAccent || null,
+        createdAt: null
+      };
+      updateProfileUI();
+      applyTheme(currentProfile.theme, currentProfile.customAccent);
+    }
+    
+    // Then fetch fresh profile from server (updates silently)
     await loadProfile();
     await loadNotes();
     applyTheme(currentProfile?.theme, currentProfile?.customAccent);
@@ -369,6 +385,9 @@ function finishLogin(data) {
   session = { 
     userId: data.userId, 
     username: data.username,
+    displayName: data.displayName || data.username,
+    theme: data.theme || 'dark',
+    customAccent: data.customAccent || null,
     expiresAt: Date.now() + (3 * 24 * 60 * 60 * 1000) // 3 days
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -413,9 +432,20 @@ async function loadProfile() {
     if (res.ok) {
       currentProfile = await res.json();
       updateProfileUI();
+      
+      // Update session cache with latest server data
+      if (session) {
+        session.displayName = currentProfile.displayName;
+        session.theme = currentProfile.theme;
+        session.customAccent = currentProfile.customAccent;
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      }
+    } else {
+      console.warn('Profile API returned', res.status, '— using cached session data');
     }
   } catch (err) {
     console.error("Failed to load profile", err);
+    // Session-cached profile is already applied by initApp, so UI won't be blank
   }
 }
 
