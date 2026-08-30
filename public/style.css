@@ -1506,20 +1506,27 @@ body.reading-mode .mobile-toggle {
   }
 
   .formatting-toolbar {
-    padding: 4px 10px;
-    gap: 1px;
+    padding: 6px 10px;
+    gap: 2px;
+    flex-wrap: wrap;
   }
   
-  #toolbarMenuBtn {
+  .toolbar-menu-toggle {
     display: inline-flex !important;
+    margin-left: auto;
   }
   
   .toolbar-extras {
     display: none;
+    width: 100%;
+    flex-wrap: wrap;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
   }
   
   .toolbar-extras.show {
-    display: contents;
+    display: flex;
   }
 
   .toolbar-select-font {
