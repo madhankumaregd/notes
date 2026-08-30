@@ -383,9 +383,24 @@ function finishLogin(data) {
 }
 
 function handleLogout() {
+  session = null;
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(DB_KEY);
-  location.reload();
+  notes = [];
+  activeNoteId = null;
+  currentProfile = null;
+  
+  // Hide everything, show login
+  settingsPanel.style.display = "none";
+  editorPanel.style.display = "none";
+  emptyState.style.display = "none";
+  authOverlay.style.display = "flex";
+  claimOverlay.style.display = "none";
+  
+  // Reset UI
+  notesList.innerHTML = "";
+  sidebarDisplayName.textContent = "User";
+  sidebarAvatar.textContent = "?";
 }
 
 /* =============================================
