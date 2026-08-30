@@ -14,8 +14,20 @@ const SESSION_KEY = "noteflow_session";
 const OLD_USER_ID_KEY = "noteflow_user_id";
 
 // Current session state
-let session = JSON.parse(localStorage.getItem(SESSION_KEY));
+let session = null;
+try {
+  const rawSession = localStorage.getItem(SESSION_KEY);
+  console.log('[NoteFlow] Raw session from localStorage:', rawSession ? 'exists (' + rawSession.length + ' chars)' : 'null');
+  if (rawSession) {
+    session = JSON.parse(rawSession);
+    console.log('[NoteFlow] Parsed session:', { userId: session?.userId, username: session?.username, expiresAt: session?.expiresAt });
+  }
+} catch (e) {
+  console.error('[NoteFlow] Failed to parse session from localStorage:', e);
+  session = null;
+}
 if (session && session.expiresAt && Date.now() > session.expiresAt) {
+  console.log('[NoteFlow] Session expired, clearing');
   session = null;
   localStorage.removeItem(SESSION_KEY);
 }
@@ -174,8 +186,10 @@ function getAuthHeaders() {
 
 async function initApp() {
   const oldUserId = localStorage.getItem(OLD_USER_ID_KEY);
+  console.log('[NoteFlow] initApp called. session:', !!session, 'oldUserId:', oldUserId);
 
   if (session) {
+    console.log('[NoteFlow] Session found, hiding auth overlays');
     // Has active session
     authOverlay.style.display = "none";
     claimOverlay.style.display = "none";
@@ -199,9 +213,11 @@ async function initApp() {
     await loadNotes();
     applyTheme(currentProfile?.theme, currentProfile?.customAccent);
   } else if (oldUserId) {
+    console.log('[NoteFlow] No session but oldUserId found, showing claim overlay');
     // Old anonymous user exists -> Show Claim Modal
     claimOverlay.style.display = "flex";
   } else {
+    console.log('[NoteFlow] No session, no oldUserId, showing login');
     // New user -> Show Login/Register
     authOverlay.style.display = "flex";
   }
