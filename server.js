@@ -66,6 +66,13 @@ async function initDb() {
 
     await turso.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
 
+    // Add created_at column if table was created previously without it
+    try {
+      await turso.execute(`ALTER TABLE users ADD COLUMN created_at INTEGER`);
+    } catch (e) {
+      // Column already exists
+    }
+
     console.log('✅ Turso "notes" & "users" tables verified');
   } catch (err) {
     console.error('❌ Error initializing Turso tables:', err);
