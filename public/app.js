@@ -1503,9 +1503,9 @@ noteTitleInput.addEventListener("input", autoSave);
 tagInput.addEventListener("input", autoSave);
 noteContent.addEventListener("input", autoSave); 
 
-document.addEventListener("selectionchange", updateActiveFormats);
-noteContent.addEventListener("keyup", updateActiveFormats);
-noteContent.addEventListener("mouseup", updateActiveFormats);
+document.addEventListener("selectionchange", updateToolbarState);
+noteContent.addEventListener("keyup", updateToolbarState);
+noteContent.addEventListener("mouseup", updateToolbarState);
 
 if (toolbarMenuBtn) {
   toolbarMenuBtn.addEventListener("click", () => {
