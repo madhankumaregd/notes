@@ -40,6 +40,25 @@ setInterval(() => {
   }
 }, 60000);
 
+// Global fetch interceptor to handle deactivated accounts dynamically
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+  const response = await originalFetch.apply(this, args);
+  if (response.status === 403) {
+    try {
+      const cloned = response.clone();
+      const data = await cloned.json();
+      if (data.isDeactivated) {
+        alert(data.error || "Your account has been deactivated... Contact an administrator.");
+        handleLogout();
+      }
+    } catch (e) {
+      // Not JSON, ignore
+    }
+  }
+  return response;
+};
+
 let currentProfile = null;
 
 let notes = [];

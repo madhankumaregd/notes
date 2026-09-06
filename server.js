@@ -145,6 +145,14 @@ async function initDb() {
       );
     `);
 
+    // Admin tokens table for persistent sessions
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS admin_tokens (
+        token TEXT PRIMARY KEY,
+        created_at INTEGER
+      );
+    `);
+
     // Admin config table
     await turso.execute(`
       CREATE TABLE IF NOT EXISTS admin_config (
@@ -217,12 +225,32 @@ function validatePassword(password) {
 }
 
 // Helper to extract userId from headers
-function getUserId(req, res) {
+async function getUserId(req, res) {
   const uid = req.headers['x-user-id'] || req.query.userId;
   if (!uid || uid === 'anon_default') {
     res.status(401).json({ error: 'Unauthorized: Missing User ID.' });
     return null;
   }
+
+  if (turso) {
+    try {
+      const result = await turso.execute({
+        sql: 'SELECT status, deleted_at FROM users WHERE id = ?',
+        args: [uid]
+      });
+      if (result.rows.length === 0 || result.rows[0].deleted_at !== null) {
+        res.status(401).json({ error: 'User not found or deleted.' });
+        return null;
+      }
+      if (result.rows[0].status === 'deactivated') {
+        res.status(403).json({ error: 'Your account has been deactivated...Contact an administrator.', isDeactivated: true });
+        return null;
+      }
+    } catch(err) {
+      console.error('Error checking user status:', err);
+    }
+  }
+
   return uid;
 }
 
@@ -415,7 +443,7 @@ app.put('/api/auth/password', async (req, res) => {
 // GET /api/profile — Get user profile
 app.get('/api/profile', async (req, res) => {
   if (!turso) return res.status(500).json({ error: 'Database not connected' });
-  const userId = getUserId(req, res);
+  const userId = await getUserId(req, res);
   if (!userId) return;
   try {
     const result = await turso.execute({
@@ -443,7 +471,7 @@ app.get('/api/profile', async (req, res) => {
 // PUT /api/profile — Update user profile
 app.put('/api/profile', async (req, res) => {
   if (!turso) return res.status(500).json({ error: 'Database not connected' });
-  const userId = getUserId(req, res);
+  const userId = await getUserId(req, res);
   if (!userId) return;
   try {
     const { displayName, theme, customAccent } = req.body;
@@ -468,7 +496,7 @@ app.put('/api/profile', async (req, res) => {
 // GET notes for current user ONLY (exclude trashed)
 app.get('/api/notes', async (req, res) => {
   if (!turso) return res.status(500).json({ error: 'Database not connected' });
-  const userId = getUserId(req, res);
+  const userId = await getUserId(req, res);
   if (!userId) return;
   try {
     const result = await turso.execute({
@@ -494,7 +522,7 @@ app.get('/api/notes', async (req, res) => {
 // POST / Save note or bulk sync for current user ONLY
 app.post('/api/notes', async (req, res) => {
   if (!turso) return res.status(500).json({ error: 'Database not connected' });
-  const userId = getUserId(req, res);
+  const userId = await getUserId(req, res);
   if (!userId) return;
   try {
     const payload = req.body;
@@ -544,7 +572,7 @@ app.post('/api/notes', async (req, res) => {
 // PUT / Update note for current user ONLY
 app.put('/api/notes/:id', async (req, res) => {
   if (!turso) return res.status(500).json({ error: 'Database not connected' });
-  const userId = getUserId(req, res);
+  const userId = await getUserId(req, res);
   if (!userId) return;
   try {
     const { id } = req.params;
@@ -571,7 +599,7 @@ app.put('/api/notes/:id', async (req, res) => {
 // DELETE note for current user ONLY — soft delete (move to trash)
 app.delete('/api/notes/:id', async (req, res) => {
   if (!turso) return res.status(500).json({ error: 'Database not connected' });
-  const userId = getUserId(req, res);
+  const userId = await getUserId(req, res);
   if (!userId) return;
   try {
     const { id } = req.params;
@@ -590,20 +618,34 @@ app.delete('/api/notes/:id', async (req, res) => {
    ADMIN PANEL
    ============================================= */
 
-// Simple token store (in-memory; resets on server restart)
-const adminTokens = new Set();
-
 function generateToken() {
   return 'adm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
 }
 
 // Admin auth middleware
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
   const token = req.headers['x-admin-token'];
-  if (!token || !adminTokens.has(token)) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid admin token' });
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized: Missing admin token' });
   }
-  next();
+  
+  if (!turso) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+
+  try {
+    const result = await turso.execute({
+      sql: 'SELECT token FROM admin_tokens WHERE token = ?',
+      args: [token]
+    });
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid admin token' });
+    }
+    next();
+  } catch (err) {
+    console.error('Admin token verification error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
 
 // Helper: verify admin password from request body
@@ -652,7 +694,10 @@ app.post('/api/admin/login', async (req, res) => {
     }
 
     const token = generateToken();
-    adminTokens.add(token);
+    await turso.execute({
+      sql: 'INSERT INTO admin_tokens (token, created_at) VALUES (?, ?)',
+      args: [token, Date.now()]
+    });
 
     res.json({ success: true, token });
   } catch (err) {

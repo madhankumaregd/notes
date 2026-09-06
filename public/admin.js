@@ -4,7 +4,7 @@
    ============================================= */
 
 const API = "/api/admin";
-let adminToken = sessionStorage.getItem("adminToken") || null;
+let adminToken = localStorage.getItem("adminToken") || null;
 
 // DOM Elements
 const loginOverlay = document.getElementById("adminLoginOverlay");
@@ -171,7 +171,7 @@ async function adminFetch(endpoint, options = {}) {
   };
   const res = await fetch(`${API}${endpoint}`, { ...options, headers });
   if (res.status === 401) {
-    sessionStorage.removeItem("adminToken");
+    localStorage.removeItem("adminToken");
     adminToken = null;
     showLoginScreen();
     throw new Error("Unauthorized");
@@ -216,7 +216,7 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
     adminToken = data.token;
-    sessionStorage.setItem("adminToken", adminToken);
+    localStorage.setItem("adminToken", adminToken);
     document.getElementById("adminDisplayName").textContent = username;
     showAdminPanel();
   } catch (err) {
@@ -231,7 +231,7 @@ togglePwBtn.addEventListener("click", () => {
 });
 
 adminLogoutBtn.addEventListener("click", () => {
-  sessionStorage.removeItem("adminToken");
+  localStorage.removeItem("adminToken");
   adminToken = null;
   showLoginScreen();
 });
@@ -978,7 +978,7 @@ passwordConfirmOverlay.addEventListener("click", (e) => {
         return;
       }
     } catch (e) {}
-    sessionStorage.removeItem("adminToken");
+    localStorage.removeItem("adminToken");
     adminToken = null;
   }
   showLoginScreen();
