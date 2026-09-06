@@ -68,6 +68,17 @@ const mobileToggle = document.getElementById("mobileToggle");
 const sidebar = document.getElementById("sidebar");
 const addChecklistBtn = document.getElementById("addChecklistBtn");
 
+const checklistSettingsBtn = document.getElementById("checklistSettingsBtn");
+const checklistSettingsModalOverlay = document.getElementById("checklistSettingsModalOverlay");
+const checklistRefreshType = document.getElementById("checklistRefreshType");
+const checklistRefreshDaysGroup = document.getElementById("checklistRefreshDaysGroup");
+const checklistRefreshDays = document.getElementById("checklistRefreshDays");
+const checklistRefreshTimeGroup = document.getElementById("checklistRefreshTimeGroup");
+const checklistRefreshTime = document.getElementById("checklistRefreshTime");
+const cancelChecklistSettings = document.getElementById("cancelChecklistSettings");
+const saveChecklistSettings = document.getElementById("saveChecklistSettings");
+const toastContainer = document.getElementById("toastContainer");
+
 const duplicateNoteBtn = document.getElementById("duplicateNoteBtn");
 const readingModeBtn = document.getElementById("readingModeBtn");
 const exitReadingBtn = document.getElementById("exitReadingBtn");
@@ -1050,6 +1061,7 @@ async function createNote() {
     title: "",
     content: "",
     tags: [],
+    settings: {},
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -1126,6 +1138,7 @@ async function duplicateActiveNote() {
     title: source.title ? `${source.title} (Copy)` : "Untitled (Copy)",
     content: source.content,
     tags: [...source.tags],
+    settings: JSON.parse(JSON.stringify(source.settings || {})),
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -1539,6 +1552,192 @@ addChecklistBtn.addEventListener("click", () => {
   execCmd("insertHTML", '<div><input type="checkbox" class="note-checkbox"> &nbsp;</div>');
 });
 
+// Checklist Settings Modal Logic
+checklistSettingsBtn.addEventListener("click", () => {
+  const note = notes.find((n) => n.id === activeNoteId);
+  if (!note) return;
+  const config = note.settings?.checklistRefresh || { type: 'none', days: [], time: '00:00' };
+  
+  checklistRefreshType.value = config.type || 'none';
+  checklistRefreshTime.value = config.time || '00:00';
+  
+  const daysButtons = checklistRefreshDays.querySelectorAll('.tag-pill');
+  daysButtons.forEach(btn => {
+    const dayVal = parseInt(btn.dataset.day);
+    if (config.days && config.days.includes(dayVal)) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  updateChecklistSettingsUI();
+  checklistSettingsModalOverlay.classList.add("open");
+});
+
+function updateChecklistSettingsUI() {
+  const type = checklistRefreshType.value;
+  if (type === 'none') {
+    checklistRefreshDaysGroup.style.display = 'none';
+    checklistRefreshTimeGroup.style.display = 'none';
+  } else if (type === 'daily') {
+    checklistRefreshDaysGroup.style.display = 'none';
+    checklistRefreshTimeGroup.style.display = 'block';
+  } else if (type === 'weekly') {
+    checklistRefreshDaysGroup.style.display = 'block';
+    checklistRefreshTimeGroup.style.display = 'block';
+  }
+}
+
+checklistRefreshType.addEventListener("change", updateChecklistSettingsUI);
+
+checklistRefreshDays.addEventListener("click", (e) => {
+  if (e.target.classList.contains('tag-pill')) {
+    e.target.classList.toggle('active');
+  }
+});
+
+cancelChecklistSettings.addEventListener("click", () => {
+  checklistSettingsModalOverlay.classList.remove("open");
+});
+
+checklistSettingsModalOverlay.addEventListener("click", (e) => {
+  if (e.target === checklistSettingsModalOverlay) {
+    checklistSettingsModalOverlay.classList.remove("open");
+  }
+});
+
+saveChecklistSettings.addEventListener("click", () => {
+  const note = notes.find((n) => n.id === activeNoteId);
+  if (!note) return;
+  
+  const type = checklistRefreshType.value;
+  const time = checklistRefreshTime.value;
+  const activeDays = Array.from(checklistRefreshDays.querySelectorAll('.tag-pill.active')).map(btn => parseInt(btn.dataset.day));
+  
+  if (!note.settings) note.settings = {};
+  note.settings.checklistRefresh = {
+    type,
+    time,
+    days: activeDays,
+    lastRefreshed: Date.now() // start counting from now to avoid immediate refresh
+  };
+  
+  checklistSettingsModalOverlay.classList.remove("open");
+  autoSave();
+});
+
+// Toast Notification Logic
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerHTML = `<span class="material-symbols-rounded toast-icon">check_circle</span> <span>${escapeHtml(message)}</span>`;
+  toastContainer.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add("fade-out");
+    toast.addEventListener("animationend", () => {
+      toast.remove();
+    });
+  }, 3000);
+}
+
+noteContent.addEventListener("change", (e) => {
+  if (e.target.type === "checkbox") {
+    if (e.target.checked) {
+      e.target.setAttribute("checked", "checked");
+      
+      // Check if all checkboxes in the note are completed
+      const allCheckboxes = noteContent.querySelectorAll('input[type="checkbox"]');
+      if (allCheckboxes.length > 0) {
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked || cb.getAttribute('checked') === 'checked');
+        if (allChecked) {
+          showToast("All checklists completed in this note!");
+        }
+      }
+      
+    } else {
+      e.target.removeAttribute("checked");
+    }
+    autoSave();
+  }
+});
+
+// Background logic for checklist refresh
+function processChecklistRefreshes() {
+  if (!notes || notes.length === 0) return;
+  const now = new Date();
+  let modifiedAny = false;
+  
+  notes.forEach(note => {
+    const config = note.settings?.checklistRefresh;
+    if (!config || config.type === 'none') return;
+    
+    const lastRefreshed = config.lastRefreshed || 0;
+    const timeParts = (config.time || '00:00').split(':');
+    const targetHour = parseInt(timeParts[0]);
+    const targetMin = parseInt(timeParts[1]);
+    
+    // Determine if we should refresh today based on type
+    let shouldRefreshToday = false;
+    if (config.type === 'daily') {
+      shouldRefreshToday = true;
+    } else if (config.type === 'weekly' && config.days) {
+      const currentDay = now.getDay();
+      if (config.days.includes(currentDay)) {
+        shouldRefreshToday = true;
+      }
+    }
+    
+    if (shouldRefreshToday) {
+      const targetTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, targetMin, 0, 0);
+      
+      // If current time is past the target time for today, AND we haven't refreshed since that target time
+      if (now.getTime() >= targetTime.getTime() && lastRefreshed < targetTime.getTime()) {
+        // We need to uncheck all checkboxes in this note
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = note.content;
+        const checkboxes = tempDiv.querySelectorAll('input[type="checkbox"]');
+        
+        let modified = false;
+        checkboxes.forEach(cb => {
+          if (cb.hasAttribute('checked') || cb.checked) {
+            cb.removeAttribute('checked');
+            cb.checked = false;
+            modified = true;
+          }
+        });
+        
+        if (modified) {
+          note.content = tempDiv.innerHTML;
+          if (activeNoteId === note.id && editorPanel.style.display !== "none") {
+             noteContent.innerHTML = note.content;
+             updateWordCount();
+          }
+          config.lastRefreshed = now.getTime();
+          modifiedAny = true;
+          saveNoteToCloud(note);
+        } else {
+          // Even if no checkboxes were checked, update the lastRefreshed time to prevent continuous parsing
+          config.lastRefreshed = now.getTime();
+          modifiedAny = true;
+          saveNoteToCloud(note);
+        }
+      }
+    }
+  });
+  
+  if (modifiedAny) {
+    renderNotesList();
+    showToast("Scheduled checklists have been refreshed.");
+  }
+}
+
+// Run checklist refresh check every minute
+setInterval(processChecklistRefreshes, 60000);
+// Also run it once on startup (wait a few seconds to let notes load)
+setTimeout(processChecklistRefreshes, 5000);
+
 searchInput.addEventListener("input", () => renderNotesList());
 
 deleteNoteBtn.addEventListener("click", () =>
@@ -1565,6 +1764,7 @@ document.addEventListener("keydown", (e) => {
     tableModalOverlay.classList.remove("open");
     linkModalOverlay.classList.remove("open");
     imageModalOverlay.classList.remove("open");
+    checklistSettingsModalOverlay.classList.remove("open");
   }
 });
 

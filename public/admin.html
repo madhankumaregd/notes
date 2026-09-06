@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Noteflow — Admin Panel</title>
+    <meta name="description" content="Noteflow Admin Panel — Manage your database, notes, users, and settings." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=account_circle,add,analytics,arrow_back,bar_chart,block,check_circle,close,cloud,dashboard,database,delete,delete_forever,description,download,edit,error,group,key,logout,manage_accounts,note,person,person_off,refresh,restore_from_trash,save,search,settings,shield,storage,trending_up,visibility,visibility_off,warning&display=swap" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+
+    <!-- ADMIN LOGIN GATE -->
+    <div class="admin-login-overlay" id="adminLoginOverlay">
+      <div class="admin-login-card">
+        <div class="admin-login-header">
+          <span class="material-symbols-rounded admin-login-icon">shield</span>
+          <h1>Admin Panel</h1>
+          <p>Enter admin credentials to continue</p>
+        </div>
+        <form id="adminLoginForm">
+          <div class="admin-field">
+            <label for="adminUsername">Username</label>
+            <div class="admin-input-wrap">
+              <span class="material-symbols-rounded">person</span>
+              <input type="text" id="adminUsername" placeholder="admin" autocomplete="username" required />
+            </div>
+          </div>
+          <div class="admin-field">
+            <label for="adminPassword">Password</label>
+            <div class="admin-input-wrap">
+              <span class="material-symbols-rounded">key</span>
+              <input type="password" id="adminPassword" placeholder="••••••" autocomplete="current-password" required />
+              <button type="button" class="admin-toggle-pw" id="adminTogglePw">
+                <span class="material-symbols-rounded">visibility</span>
+              </button>
+            </div>
+          </div>
+          <div class="admin-login-error" id="adminLoginError"></div>
+          <button type="submit" class="admin-login-btn">Sign In</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MAIN ADMIN LAYOUT -->
+    <div class="admin-layout" id="adminLayout" style="display:none">
+
+      <!-- SIDEBAR -->
+      <aside class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-header">
+          <span class="admin-logo">✦</span>
+          <span class="admin-brand">Noteflow</span>
+          <span class="admin-badge">Admin</span>
+        </div>
+
+        <nav class="admin-nav">
+          <button class="admin-nav-item active" data-page="dashboard" id="navDashboard">
+            <span class="material-symbols-rounded">dashboard</span>
+            <span>Dashboard</span>
+          </button>
+          <button class="admin-nav-item" data-page="notes" id="navNotes">
+            <span class="material-symbols-rounded">description</span>
+            <span>Notes</span>
+          </button>
+          <button class="admin-nav-item" data-page="users" id="navUsers">
+            <span class="material-symbols-rounded">group</span>
+            <span>Users</span>
+          </button>
+          <button class="admin-nav-item" data-page="trash" id="navTrash">
+            <span class="material-symbols-rounded">delete</span>
+            <span>Trash</span>
+            <span class="nav-badge" id="trashBadge" style="display:none">0</span>
+          </button>
+          <button class="admin-nav-item" data-page="settings" id="navSettings">
+            <span class="material-symbols-rounded">settings</span>
+            <span>Settings</span>
+          </button>
+        </nav>
+
+        <div class="admin-sidebar-footer">
+          <a href="/" class="admin-nav-item admin-back-link">
+            <span class="material-symbols-rounded">arrow_back</span>
+            <span>Back to App</span>
+          </a>
+          <button class="admin-nav-item" id="adminLogoutBtn">
+            <span class="material-symbols-rounded">logout</span>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="admin-main">
+
+        <!-- TOP BAR -->
+        <header class="admin-topbar">
+          <div class="admin-topbar-left">
+            <h2 class="admin-page-title" id="pageTitle">Dashboard</h2>
+          </div>
+          <div class="admin-topbar-right">
+            <button class="admin-refresh-btn" id="globalRefreshBtn" title="Refresh Data">
+              <span class="material-symbols-rounded">refresh</span>
+            </button>
+            <div class="admin-user-pill">
+              <span class="material-symbols-rounded">shield</span>
+              <span id="adminDisplayName">Admin</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- PAGE: DASHBOARD -->
+        <section class="admin-page active" id="pageDashboard">
+          <!-- Stats Cards Row -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-card-icon" style="--card-accent: #38bdf8">
+                <span class="material-symbols-rounded">group</span>
+              </div>
+              <div class="stat-card-body">
+                <span class="stat-card-value" id="statTotalUsers">—</span>
+                <span class="stat-card-label">Total Users</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon" style="--card-accent: #e8b86d">
+                <span class="material-symbols-rounded">description</span>
+              </div>
+              <div class="stat-card-body">
+                <span class="stat-card-value" id="statTotalNotes">—</span>
+                <span class="stat-card-label">Total Notes</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon" style="--card-accent: #4ade80">
+                <span class="material-symbols-rounded">storage</span>
+              </div>
+              <div class="stat-card-body">
+                <span class="stat-card-value" id="statDbSize">—</span>
+                <span class="stat-card-label">Database Size</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-icon" style="--card-accent: #f472b6">
+                <span class="material-symbols-rounded">trending_up</span>
+              </div>
+              <div class="stat-card-body">
+                <span class="stat-card-value" id="statRecentActivity">—</span>
+                <span class="stat-card-label">Notes (24h)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- DB Stats Section with date picker -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3><span class="material-symbols-rounded">database</span> Database Statistics</h3>
+              <div class="stats-date-controls">
+                <input type="date" id="statsDateFrom" class="admin-date-input" />
+                <span class="stats-date-sep">to</span>
+                <input type="date" id="statsDateTo" class="admin-date-input" />
+                <button class="admin-btn small primary" id="statsDateApply">Apply</button>
+                <button class="admin-btn small secondary" id="statsDateToday">Today</button>
+                <button class="admin-btn small secondary" id="statsDate7d">7 Days</button>
+                <button class="admin-btn small secondary" id="statsDate30d">30 Days</button>
+              </div>
+            </div>
+            <div class="admin-card-body">
+              <div class="db-stats-grid" id="dbStatsGrid"></div>
+              <!-- Stats History Table -->
+              <div class="stats-history-section" id="statsHistorySection" style="display:none">
+                <h4 class="stats-history-title">Daily Breakdown</h4>
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Reads</th>
+                      <th>Writes</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="statsHistoryBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3><span class="material-symbols-rounded">bar_chart</span> Recent Notes Activity</h3>
+            </div>
+            <div class="admin-card-body">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Note Title</th>
+                    <th>Owner</th>
+                    <th>Tags</th>
+                    <th>Last Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="recentNotesBody">
+                  <tr><td colspan="4" class="table-empty">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: NOTES -->
+        <section class="admin-page" id="pageNotes">
+          <div class="admin-toolbar">
+            <div class="admin-search-wrap">
+              <span class="material-symbols-rounded">search</span>
+              <input type="text" placeholder="Search notes by title, content, or owner..." id="notesSearchInput" />
+            </div>
+            <div class="admin-toolbar-actions">
+              <select id="notesFilterUser" class="admin-select">
+                <option value="">All Users</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-card">
+            <div class="admin-card-body no-pad">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Owner</th>
+                    <th>Tags</th>
+                    <th>Size</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="allNotesBody">
+                  <tr><td colspan="7" class="table-empty">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: USERS -->
+        <section class="admin-page" id="pageUsers">
+          <div class="admin-toolbar">
+            <div class="admin-search-wrap">
+              <span class="material-symbols-rounded">search</span>
+              <input type="text" placeholder="Search users by name or username..." id="usersSearchInput" />
+            </div>
+          </div>
+          <div class="admin-card">
+            <div class="admin-card-body no-pad">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Username</th>
+                    <th>Notes</th>
+                    <th>Status</th>
+                    <th>Theme</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="allUsersBody">
+                  <tr><td colspan="7" class="table-empty">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: TRASH -->
+        <section class="admin-page" id="pageTrash">
+          <!-- Trashed Notes -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3><span class="material-symbols-rounded">description</span> Trashed Notes</h3>
+            </div>
+            <div class="admin-card-body no-pad">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Owner</th>
+                    <th>Deleted</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="trashedNotesBody">
+                  <tr><td colspan="4" class="table-empty">No trashed notes</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Trashed Users -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3><span class="material-symbols-rounded">group</span> Trashed Users</h3>
+            </div>
+            <div class="admin-card-body no-pad">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Username</th>
+                    <th>Notes</th>
+                    <th>Deleted</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="trashedUsersBody">
+                  <tr><td colspan="5" class="table-empty">No trashed users</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Trash Danger Zone -->
+          <div class="admin-card danger-card">
+            <div class="admin-card-header">
+              <h3><span class="material-symbols-rounded">warning</span> Permanent Deletion</h3>
+            </div>
+            <div class="admin-card-body">
+              <div class="danger-actions">
+                <div class="danger-item">
+                  <div>
+                    <strong>Empty Trash Permanently</strong>
+                    <p>Permanently delete ALL trashed notes and users from the database. This action is IRREVERSIBLE.</p>
+                  </div>
+                  <button class="admin-btn danger" id="emptyTrashBtn">
+                    <span class="material-symbols-rounded">delete_forever</span> Empty Trash
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: SETTINGS -->
+        <section class="admin-page" id="pageSettings">
+          <div class="settings-grid">
+            <!-- Admin Credentials -->
+            <div class="admin-card">
+              <div class="admin-card-header">
+                <h3><span class="material-symbols-rounded">shield</span> Admin Credentials</h3>
+              </div>
+              <div class="admin-card-body">
+                <div class="settings-form">
+                  <div class="admin-field">
+                    <label for="settingsAdminUser">Admin Username</label>
+                    <input type="text" id="settingsAdminUser" class="admin-input" />
+                  </div>
+                  <div class="admin-field">
+                    <label for="settingsAdminPass">New Admin Password</label>
+                    <input type="password" id="settingsAdminPass" class="admin-input" placeholder="Leave blank to keep current" />
+                  </div>
+                  <button class="admin-btn primary" id="saveAdminCredentialsBtn">
+                    <span class="material-symbols-rounded">save</span> Save Credentials
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Application Info -->
+            <div class="admin-card">
+              <div class="admin-card-header">
+                <h3><span class="material-symbols-rounded">cloud</span> Application Info</h3>
+              </div>
+              <div class="admin-card-body">
+                <div class="settings-info-grid">
+                  <div class="settings-info-row">
+                    <span class="settings-info-label">App Name</span>
+                    <span class="settings-info-value">Noteflow</span>
+                  </div>
+                  <div class="settings-info-row">
+                    <span class="settings-info-label">Version</span>
+                    <span class="settings-info-value">1.0.0</span>
+                  </div>
+                  <div class="settings-info-row">
+                    <span class="settings-info-label">Database</span>
+                    <span class="settings-info-value">Turso (libSQL)</span>
+                  </div>
+                  <div class="settings-info-row">
+                    <span class="settings-info-label">Runtime</span>
+                    <span class="settings-info-value" id="settingsRuntime">Node.js</span>
+                  </div>
+                  <div class="settings-info-row">
+                    <span class="settings-info-label">Server Uptime</span>
+                    <span class="settings-info-value" id="settingsUptime">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="admin-card danger-card">
+              <div class="admin-card-header">
+                <h3><span class="material-symbols-rounded">warning</span> Danger Zone</h3>
+              </div>
+              <div class="admin-card-body">
+                <p class="danger-note">All actions below require admin password and will move data to Trash (not permanently deleted).</p>
+                <div class="danger-actions">
+                  <div class="danger-item">
+                    <div>
+                      <strong>Trash All Notes</strong>
+                      <p>Move all notes from every user to trash. Recoverable from the Trash page.</p>
+                    </div>
+                    <button class="admin-btn danger" id="deleteAllNotesBtn">Trash All Notes</button>
+                  </div>
+                  <div class="danger-item">
+                    <div>
+                      <strong>Trash All Users &amp; Notes</strong>
+                      <p>Move all user accounts and their notes to trash. Recoverable from the Trash page.</p>
+                    </div>
+                    <button class="admin-btn danger" id="deleteAllUsersBtn">Trash All Users &amp; Notes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- NOTE VIEW MODAL -->
+    <div class="admin-modal-overlay" id="noteViewModalOverlay">
+      <div class="admin-modal wide">
+        <div class="admin-modal-header">
+          <h3 id="noteViewTitle">Note Preview</h3>
+          <button class="admin-modal-close" id="noteViewClose">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="admin-modal-body">
+          <div class="note-view-meta" id="noteViewMeta"></div>
+          <div class="note-view-content" id="noteViewContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIRM MODAL (simple) -->
+    <div class="admin-modal-overlay" id="confirmModalOverlay">
+      <div class="admin-modal narrow">
+        <div class="admin-modal-header">
+          <h3 id="confirmTitle">Confirm Action</h3>
+        </div>
+        <div class="admin-modal-body">
+          <p id="confirmMessage">Are you sure?</p>
+        </div>
+        <div class="admin-modal-footer">
+          <button class="admin-btn secondary" id="confirmCancel">Cancel</button>
+          <button class="admin-btn danger" id="confirmOk">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASSWORD CONFIRM MODAL (for dangerous actions) -->
+    <div class="admin-modal-overlay" id="passwordConfirmOverlay">
+      <div class="admin-modal narrow">
+        <div class="admin-modal-header">
+          <h3 id="passwordConfirmTitle">Confirm with Password</h3>
+        </div>
+        <div class="admin-modal-body">
+          <p id="passwordConfirmMessage" class="pw-confirm-msg">Enter your admin password to proceed.</p>
+          <div class="admin-field" style="margin-top:12px">
+            <label for="passwordConfirmInput">Admin Password</label>
+            <div class="admin-input-wrap">
+              <span class="material-symbols-rounded">key</span>
+              <input type="password" id="passwordConfirmInput" placeholder="Enter admin password" />
+            </div>
+          </div>
+          <div class="admin-login-error" id="passwordConfirmError"></div>
+        </div>
+        <div class="admin-modal-footer">
+          <button class="admin-btn secondary" id="passwordConfirmCancel">Cancel</button>
+          <button class="admin-btn danger" id="passwordConfirmOk">
+            <span class="material-symbols-rounded">warning</span> Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="admin-toast-container" id="adminToastContainer"></div>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
